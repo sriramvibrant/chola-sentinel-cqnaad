@@ -85,12 +85,14 @@ def train_model():
 
 # Endpoint test function
 def full_endpoint_test(endpoints_input):
-    if not st.session_state.model_trained:
-        return pd.DataFrame({"Message": ["Train model first in 'Train Model' tab"]})
-
+    # Create the list of endpoints from the input text area
     endpoints = [e.strip() for e in endpoints_input.split('\n') if e.strip()]
+    
     if not endpoints:
         return pd.DataFrame({"Message": ["Enter at least one endpoint"]})
+
+    if model is None or criterion is None:
+        return pd.DataFrame({"Message": ["Train model first in 'Train Model' tab"]})
 
     results = []
     for endpoint in endpoints:
@@ -98,7 +100,7 @@ def full_endpoint_test(endpoints_input):
         nv_prob = nv_spin_probability(random.uniform(0, 1.5))
         input_tensor = torch.tensor([[nv_prob]], dtype=torch.float32)
         with torch.no_grad():
-            recon_loss = st.session_state.criterion(st.session_state.model(input_tensor), input_tensor).item()
+            recon_loss = criterion(model(input_tensor), input_tensor).item()
         sim_alert = "THREAT DETECTED" if recon_loss > 0.0005 or nv_prob > 0.6 else "Normal"
         
         results.append({
@@ -108,7 +110,7 @@ def full_endpoint_test(endpoints_input):
             "Recon Loss": recon_loss,
             "Sim Alert": sim_alert
         })
-        time.sleep(1)  # 1 second delay between endpoints
+        time.sleep(1)
     
     df = pd.DataFrame(results)
     return df
