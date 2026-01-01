@@ -137,6 +137,3 @@ with tab2:
 with tab3:
     st.subheader("Alert History")
     st.dataframe(load_history())
-
-if __name__ == "__main__":
-    pass
