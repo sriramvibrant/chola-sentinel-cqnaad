@@ -14,7 +14,7 @@ import logging
 # Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# In-memory data
+# In-memory data (Streamlit session state)
 if 'alerts_data' not in st.session_state:
     st.session_state.alerts_data = []
 if 'vulns_data' not in st.session_state:
@@ -35,7 +35,7 @@ def load_history():
         return pd.DataFrame({"timestamp": ["No alerts yet"], "type": ["—"], "message": ["—"]})
     return pd.DataFrame(st.session_state.alerts_data)
 
-# Autoencoder & NV sim functions
+# Autoencoder
 class Autoencoder(nn.Module):
     def __init__(self):
         super().__init__()
@@ -45,6 +45,7 @@ class Autoencoder(nn.Module):
     def forward(self, x):
         return self.decoder(self.encoder(x))
 
+# NV spin simulation
 def nv_spin_probability(magnetic_field=0.0, shots=1024):
     qc = QuantumCircuit(1, 1)
     qc.h(0)
@@ -55,6 +56,7 @@ def nv_spin_probability(magnetic_field=0.0, shots=1024):
     counts = result.get_counts(qc)
     return counts.get('1', 0) / shots
 
+# Train autoencoder
 def train_model():
     if st.session_state.model_trained:
         return "Model already trained!"
@@ -81,6 +83,7 @@ def train_model():
     except Exception as e:
         return f"Training failed: {str(e)} - using fallback mode"
 
+# Endpoint test function
 def full_endpoint_test(endpoints_input):
     if not st.session_state.model_trained:
         return pd.DataFrame({"Message": ["Train model first in 'Train Model' tab"]})
