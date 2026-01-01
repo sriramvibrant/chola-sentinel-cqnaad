@@ -1,0 +1,7 @@
+streamlit
+requests
+pandas
+numpy
+torch
+qiskit
+qiskit-aer
