@@ -14,7 +14,7 @@ import logging
 # Logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-# In-memory data (Streamlit session state)
+# In-memory data
 if 'alerts_data' not in st.session_state:
     st.session_state.alerts_data = []
 if 'vulns_data' not in st.session_state:
@@ -84,34 +84,35 @@ def train_model():
         return f"Training failed: {str(e)} - using fallback mode"
 
 # Endpoint test function
-for endpoint in endpoints:
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+def full_endpoint_test(endpoints_input):
+    if not st.session_state.model_trained:
+        return pd.DataFrame({"Message": ["Train model first in 'Train Model' tab"]})
+
+    endpoints = [e.strip() for e in endpoints_input.split('\n') if e.strip()]
+    if not endpoints:
+        return pd.DataFrame({"Message": ["Enter at least one endpoint"]})
+
+    results = []
+    for endpoint in endpoints:
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        nv_prob = nv_spin_probability(random.uniform(0, 1.5))
+        input_tensor = torch.tensor([[nv_prob]], dtype=torch.float32)
+        with torch.no_grad():
+            recon_loss = st.session_state.criterion(st.session_state.model(input_tensor), input_tensor).item()
+        sim_alert = "THREAT DETECTED" if recon_loss > 0.0005 or nv_prob > 0.6 else "Normal"
+        
+        results.append({
+            "Timestamp": timestamp,
+            "Endpoint": endpoint,
+            "NV Prob": nv_prob,
+            "Recon Loss": recon_loss,
+            "Sim Alert": sim_alert
+        })
+        time.sleep(1)  # 1 second delay between endpoints
     
-    # Simulated NV + AI
-    nv_prob = nv_spin_probability(random.uniform(0, 1.5))
-    input_tensor = torch.tensor([[nv_prob]], dtype=torch.float32)
-    with torch.no_grad():
-        recon_loss = criterion(model(input_tensor), input_tensor).item()
-    sim_alert = "THREAT DETECTED" if recon_loss > 0.0005 or nv_prob > 0.6 else "Normal"
-    
-    # Real endpoint
-    real_details, real_vuln = classify_real_endpoint(endpoint)
-    
-    # Log
-    log_msg = f"{timestamp} | {endpoint} | NV Prob: {nv_prob:.4f} | Loss: {recon_loss:.6f} | Sim Alert: {sim_alert} | Real Details: {real_details} | Real Vuln: {real_vuln}"
-    logging.info(log_msg)
-    
-    results.append({
-        "Timestamp": timestamp,
-        "Endpoint": endpoint,
-        "NV Prob": nv_prob,
-        "Recon Loss": recon_loss,
-        "Sim Alert": sim_alert,
-        "Real Details": real_details,
-        "Real Vuln": real_vuln
-    })
-    
-    time.sleep(1)  # 1 second delay between endpoints
+    df = pd.DataFrame(results)
+    return df
+
 # Streamlit UI with tabs
 st.set_page_config(page_title="Chola Sentinel CQNAAD", layout="wide")
 st.title("Chola Sentinel CQNAAD")
